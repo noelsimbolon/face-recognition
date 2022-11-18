@@ -27,3 +27,4 @@ def get_covariance(filepath):
     img = img - mean
     # langkah 4
     cov = np.cov(img)
+    return cov
