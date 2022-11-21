@@ -1,37 +1,65 @@
 import cv2
-import numpy as np
 import os
+import json
 from math import sqrt
+try:
+    import cupy as np
+except ImportError:
+    import numpy as np
 
 
-def get_covariance_dir(filepath) -> np.array:
+def load_images(filepath, cov=True):
     files = []
     for folder in os.listdir(filepath):
         folder_path = os.path.join(filepath, folder)
-        for idx, img in zip(range(10), os.listdir(folder_path)):
+        for idx, img in zip(range(3), os.listdir(folder_path)):
             img_path = os.path.join(folder_path, img)
             files.append(img_path)
-    cov = np.array([get_covariance_image(i) for i in files])
-    return cov
+    with open("data/images.json", "w+") as f:
+        json.dump(files, f)
+    # cov = np.array([load_image(i) for i in files])
+    images = np.array([load_image(i) for i in files])
+    return get_cov(images) if cov else images, mean_images(images)
 
 
-def get_image_mean(file):
+def load_image(file):
     # langkah 1
     img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
     img = cv2.resize(img, (256, 256))
-    img = np.array(img, dtype=np.float64)
-
-    # langkah 2
-    mean = np.mean(img)
-
-    # langkah 3
-    img -= mean
+    img = np.array(img, dtype=np.float32)
     return img
 
 
-def get_covariance_image(file):
+def get_vectors(imgs):
+    return np.array([i.flatten() for i in imgs])
+
+
+def mean_images(imgs):
+    # langkah 2
+    vectors = get_vectors(imgs)
+    mean = np.zeros((1, 256 * 256), dtype=np.float32)
+    for i in vectors:
+        mean = np.add(mean, i)
+    mean = np.divide(mean, float(imgs.shape[0])).flatten()
+    # mean = np.mean(vectors, axis=0)
+    return mean
+
+
+def normalize_tensors(imgs, tensors, mean):
+    # langkah 3
+    normalized = np.ndarray((imgs.shape[0], 256 * 256), dtype=np.float32)
+    for i in range(imgs.shape[0]):
+        normalized[i] = np.subtract(tensors[i], mean)
+    return normalized
+
+
+def get_cov(imgs):
     # langkah 4
-    return np.cov(get_image_mean(file))
+    mean = mean_images(imgs)
+    vectors = get_vectors(imgs)
+    normalized = normalize_tensors(imgs, vectors, mean)
+    cov = np.cov(normalized)
+    return cov
 
 
 def norm(matrix):
@@ -39,7 +67,7 @@ def norm(matrix):
 
 
 def qr_decom(matrix):
-    k = np.array(matrix, dtype=np.float64)
+    k = np.array(matrix, dtype=np.float32)
     c = np.copy(k)
     m, n = k.shape
 
@@ -58,7 +86,7 @@ def qr_decom(matrix):
 
     R = np.matmul(np.transpose(Q), c)
 
-    return -Q, -R
+    return -np.matmul(Q, np.sign(np.diagonal(np.sign(Q)))), -np.matmul(np.sign(np.diagonal(np.sign(Q))), R)
 
 
 def eigen(matrix, iteration=100):
@@ -91,13 +119,24 @@ def eigen(matrix, iteration=100):
     return eigenvalue, eigenvector
 
 
-def eface(eigenvector, avrmatrix):
-    eigenface = list()
-    n = avrmatrix.shape[0]
-    for i in range(n):
-        eigenface.append(np.matmul(eigenvector, avrmatrix[0]))
+def eigenface(eig, mean_matrix):
+    eigenvalue, eigenvector = eig
+    n, _ = mean_matrix.shape
 
-    return eigenface
+    eig_pairs = [(eigenvalue[i], eigenvector[:n, i]) for i in range(n)]
+    eig_pairs.sort(reverse=True)
+    eigvalues_sort = [eig_pairs[i][0] for i in range(n)]
+    eigvectors_sort = [eig_pairs[i][1] for i in range(n)]
+
+    reduced_eigenvector = np.array(eigvectors_sort[:n]).transpose()
+
+    vectors = (mean_matrix.reshape((256, 256)) * 256.).astype(np.float32)
+    proj_data = np.dot(vectors.transpose(), reduced_eigenvector)
+    return proj_data
+    # eigenface = np.zeros((n, n), dtype=np.float32)
+    # for i in range(n):
+    #     eigenface[:, i] = eigenvector[:, i] + mean_matrix.flatten()
+    # return eigenface
 
 
 if __name__ == "__main__":
