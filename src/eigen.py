@@ -132,11 +132,27 @@ def eigenface(eig, mean_matrix):
 
     vectors = (mean_matrix.reshape((256, 256)) * 256.).astype(np.float32)
     proj_data = np.dot(vectors.transpose(), reduced_eigenvector)
+    print(proj_data)
     return proj_data
     # eigenface = np.zeros((n, n), dtype=np.float32)
     # for i in range(n):
     #     eigenface[:, i] = eigenvector[:, i] + mean_matrix.flatten()
     # return eigenface
+
+def euclidean_distance(eigenface_training, eigenface_testing):
+    n = eigenface_testing.shape[0]
+
+    smallest_distance = 999
+    idx_smallest = 0
+
+    for i in range(n):
+        distance = np.sqrt(np.sum(np.square(eigenface_training - eigenface_testing[i])))
+
+        if distance < smallest_distance:
+            smallest_distance = distance
+            idx_smallest = i
+
+    return idx_smallest, smallest_distance
 
 
 if __name__ == "__main__":
