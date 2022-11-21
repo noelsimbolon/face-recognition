@@ -1,14 +1,13 @@
 import cv2
 import os
 import json
-from math import sqrt
 try:
     import cupy as np
 except ImportError:
     import numpy as np
 
 
-def load_images(filepath, cov=True):
+def load_images(filepath):
     files = []
     for folder in os.listdir(filepath):
         folder_path = os.path.join(filepath, folder)
@@ -17,53 +16,39 @@ def load_images(filepath, cov=True):
             files.append(img_path)
     with open("data/images.json", "w+") as f:
         json.dump(files, f)
-    # cov = np.array([load_image(i) for i in files])
     images = np.array([load_image(i) for i in files])
-    return get_cov(images) if cov else images, mean_images(images)
+    return images.transpose()
 
 
 def load_image(file):
     # langkah 1
     img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
     img = cv2.resize(img, (256, 256))
-    img = np.array(img, dtype=np.float32)
+    img = img.reshape(256 * 256,)
     return img
 
 
-def get_vectors(imgs):
-    return np.array([i.flatten() for i in imgs])
+def process_image(file, mean):
+    img = load_image(file)
+    img = img.reshape(256 * 256, 1)
+    img = np.asarray(img)
+    return img - mean
 
 
 def mean_images(imgs):
     # langkah 2
-    vectors = get_vectors(imgs)
-    mean = np.zeros((1, 256 * 256), dtype=np.float32)
-    for i in vectors:
-        mean = np.add(mean, i)
-    mean = np.divide(mean, float(imgs.shape[0])).flatten()
-    # mean = np.mean(vectors, axis=0)
-    return mean
-
-
-def normalize_tensors(imgs, tensors, mean):
-    # langkah 3
-    normalized = np.ndarray((imgs.shape[0], 256 * 256), dtype=np.float32)
-    for i in range(imgs.shape[0]):
-        normalized[i] = np.subtract(tensors[i], mean)
-    return normalized
+    mean = imgs.mean(axis=1)
+    mean = mean.reshape(imgs.shape[0], 1)
+    return mean, imgs - mean  # langkah 3
 
 
 def get_cov(imgs):
     # langkah 4
-    mean = mean_images(imgs)
-    vectors = get_vectors(imgs)
-    normalized = normalize_tensors(imgs, vectors, mean)
-    cov = np.cov(normalized)
-    return cov
+    return np.cov(imgs)
 
 
 def norm(matrix):
-    return sqrt(sum([i ** 2 for i in matrix]))
+    return np.sqrt(np.sum(np.square(matrix)))
 
 
 def qr_decom(matrix):
@@ -119,34 +104,14 @@ def eigen(matrix, iteration=100):
     return eigenvalue, eigenvector
 
 
-def eigenface(eig, mean_matrix):
-    eigenvalue, eigenvector = eig
-    n, _ = mean_matrix.shape
-
-    eig_pairs = [(eigenvalue[i], eigenvector[:n, i]) for i in range(n)]
-    eig_pairs.sort(reverse=True)
-    eigvalues_sort = [eig_pairs[i][0] for i in range(n)]
-    eigvectors_sort = [eig_pairs[i][1] for i in range(n)]
-
-    reduced_eigenvector = np.array(eigvectors_sort[:n]).transpose()
-
-    vectors = (mean_matrix.reshape((256, 256)) * 256.).astype(np.float32)
-    proj_data = np.dot(vectors.transpose(), reduced_eigenvector)
-    print(proj_data)
-    return proj_data
-    # eigenface = np.zeros((n, n), dtype=np.float32)
-    # for i in range(n):
-    #     eigenface[:, i] = eigenvector[:, i] + mean_matrix.flatten()
-    # return eigenface
-
 def euclidean_distance(eigenface_training, eigenface_testing):
-    n = eigenface_testing.shape[0]
+    n = eigenface_training.shape[0]
 
-    smallest_distance = 999
+    smallest_distance = 99999
     idx_smallest = 0
 
     for i in range(n):
-        distance = np.sqrt(np.sum(np.square(eigenface_training - eigenface_testing[i])))
+        distance = norm(eigenface_training[:, i] - eigenface_testing[i, :])
 
         if distance < smallest_distance:
             smallest_distance = distance
