@@ -225,10 +225,13 @@ class App(customtkinter.CTk):
             self.dataset_directory_label.configure(text=None)
             self.dataset_directory_label.configure(text="Directory is selected!")
 
-        os.remove("./data/training_data_mean.npy")
-        os.remove("./data/training_data_eigenface.npy")
-        os.remove("./data/training_data_eigenvector.npy")
-        os.remove("./data/training_data_weights.npy")
+        data_dir = os.listdir("./data")
+        for file in data_dir:
+            if file.endswith(".npy"):
+                os.remove("./data/training_data_mean.npy")
+                os.remove("./data/training_data_eigenface.npy")
+                os.remove("./data/training_data_eigenvector.npy")
+                os.remove("./data/training_data_weights.npy")
 
     def get_res_image(self):
         App.res_image_full_path = f"{App.res_image}"
