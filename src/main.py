@@ -65,7 +65,7 @@ def generate_training_data(image_dir, filename):
 
 
 if __name__ == "__main__":
-    data_filename = r"data\training_data"
+    data_filename = r"data/training_data"
     path = get_path()
     if not (os.path.isfile(data_filename + "_eigenface.npy")
             and os.path.isfile(data_filename + "_mean.npy")

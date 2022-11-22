@@ -19,13 +19,15 @@ def load_images(filepath):
             files.append(folder_path)
     with open("data/images.json", "w+") as f:
         json.dump(files, f)
-    images = np.array([load_image(i) for i in files])
+    images = np.array([load_image(i) for i in files if i.endswith(".jpg")])
     return images
 
 
 def load_image(file):
     # langkah 1
     img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
+    if img is None:
+        raise AttributeError("Invalid image! " + file)
     img = cv2.resize(img, (256, 256))
     img = img.flatten()
     return img

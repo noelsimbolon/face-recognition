@@ -2,10 +2,12 @@ import json
 import os
 import tkinter
 import customtkinter
+import eigen
 from tkinter import filedialog
 from PIL import Image, ImageTk
 from main import generate_training_data, load_training_data
-import eigen
+from timeit import default_timer as timer
+
 
 customtkinter.set_appearance_mode("Dark")
 customtkinter.set_default_color_theme("blue")
@@ -17,7 +19,9 @@ class App(customtkinter.CTk):
     dataset_dir = None
     test_image = None
     res_image = None
+    res_image_full_path = None
     idx = None
+    exec_time = None
 
     def __init__(self):
         super().__init__()
@@ -109,6 +113,7 @@ class App(customtkinter.CTk):
 
         self.result_percentage_label = customtkinter.CTkLabel(master=self.left_frame,
                                                               text="",
+                                                              text_color="green",
                                                               text_font=(
                                                                   "Open Sans", -14))  # font name and size in px
         self.result_percentage_label.grid(row=12, column=0, pady=0, padx=20)
@@ -121,6 +126,7 @@ class App(customtkinter.CTk):
 
         self.exec_time_label = customtkinter.CTkLabel(master=self.left_frame,
                                                       text="",
+                                                      text_color="green",
                                                       text_font=(
                                                           "Open Sans", -14))  # font name and size in px
         self.exec_time_label.grid(row=14, column=0, pady=0, padx=20)
@@ -216,14 +222,18 @@ class App(customtkinter.CTk):
         App.dataset_dir = dataset_dir
 
         if App.dataset_dir != '':
-            print(App.dataset_dir)
             self.dataset_directory_label.configure(text=None)
             self.dataset_directory_label.configure(text="Directory is selected!")
 
-    def get_res_image(self):
-        res_image_full_path = f"{App.dataset_dir}/{App.res_image}"
+        os.remove("./data/training_data_mean.npy")
+        os.remove("./data/training_data_eigenface.npy")
+        os.remove("./data/training_data_eigenvector.npy")
+        os.remove("./data/training_data_weights.npy")
 
-        res_image = Image.open(res_image_full_path)
+    def get_res_image(self):
+        App.res_image_full_path = f"{App.res_image}"
+
+        res_image = Image.open(App.res_image_full_path)
         res_image = res_image.resize((400, 400))
         res_image = ImageTk.PhotoImage(res_image)
 
@@ -238,7 +248,10 @@ class App(customtkinter.CTk):
             self.recognition_status_label.configure(text_color="red",
                                                     text="Test image is not defined!")
         else:
-            data_filename = r"\data\training_data"
+            start_time = timer()
+
+            data_filename = os.getcwd() + r"/data/training_data"
+
             if not (os.path.isfile(data_filename + "_eigenface.npy")
                     and os.path.isfile(data_filename + "_mean.npy")
                     and os.path.isfile(data_filename + "_eigenvector.npy")
@@ -249,34 +262,36 @@ class App(customtkinter.CTk):
             else:
                 self.recognition_status_label.configure(text_color=("blue", "yellow"),
                                                         text="Loading dataset...")
+
             eigenvectors, eigenfaces, mean, weights = load_training_data(data_filename)
             files = json.load(open("data/images.json", "r"))
 
             self.recognition_status_label.configure(text_color=("blue", "yellow"),
                                                     text="Recognizing...")
 
-            # =============== ALGORITHM HERE ==============
             image = eigen.process_image(App.test_image, mean)
             testing_weights = image.T @ eigenfaces.T
             App.idx, _ = eigen.euclidean_distance(weights, testing_weights)
 
             App.res_image = files[App.idx]
+            App.res_image = App.res_image.replace("\\", "/")
+
+            end_time = timer()
+
+            App.exec_time = f"{end_time - start_time:.2f} s"
 
             self.recognition_status_label.configure(text_color="green",
                                                     text="Finished!")
 
-            self.set_result_percentage()
+            self.get_res_image()
+            self.set_result()
             self.set_exec_time()
 
-    def set_result_percentage(self):
-        self.result_percentage_label.configure(text="")
+    def set_result(self):
+        self.result_percentage_label.configure(text="Match!")
 
     def set_exec_time(self):
-        self.exec_time_label.configure(text="")
-
-
-def button_event():
-    print(App.test_image)
+        self.exec_time_label.configure(text=App.exec_time)
 
 
 def change_appearance_mode(new_appearance_mode):
