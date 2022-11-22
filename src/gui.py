@@ -9,7 +9,9 @@ customtkinter.set_default_color_theme("blue")
 
 class App(customtkinter.CTk):
     min_width = 1050
-    min_height = 500
+    min_height = 600
+    dataset_dir = None
+    test_image = None
 
     def __init__(self):
         super().__init__()
@@ -33,71 +35,101 @@ class App(customtkinter.CTk):
 
         # ============ left_frame ============
 
-        # Configure grid layout (15 x 1)
+        # Configure grid layout (17 x 1)
         self.left_frame.grid_rowconfigure(0, minsize=10)  # empty row with minsize as spacing
-        self.left_frame.grid_rowconfigure(6, weight=1)  # empty row as spacing
-        self.left_frame.grid_rowconfigure(11, minsize=20)  # empty row as spacing
-        self.left_frame.grid_rowconfigure(14, minsize=20)  # empty row with minsize as spacing
+        self.left_frame.grid_rowconfigure(10, weight=1)  # empty row as spacing
+        self.left_frame.grid_rowconfigure(15, minsize=20)  # empty row as spacing
+        self.left_frame.grid_rowconfigure(18, minsize=20)  # empty row with minsize as spacing
 
         # App title
         self.app_title = customtkinter.CTkLabel(master=self.left_frame,
                                                 text="Face Recognition",
                                                 text_font=("Open Sans Bold", -18))  # font name and size in px
-        self.app_title.grid(row=1, column=0, pady=10, padx=10)
+        self.app_title.grid(row=1, column=0, pady=10, padx=20)
 
         # Import dataset
         self.dataset_label = customtkinter.CTkLabel(master=self.left_frame,
                                                     text="Import dataset",
                                                     text_font=("Open Sans", -14))  # font name and size in px
-        self.dataset_label.grid(row=2, column=0, pady=0, padx=10)
+        self.dataset_label.grid(row=2, column=0, pady=0, padx=20)
+
         self.dataset_button = customtkinter.CTkButton(master=self.left_frame,
                                                       text="Open folder",
                                                       text_font=("Open Sans", -12),
-                                                      command=button_event)
+                                                      command=self.get_dataset_dir)
         self.dataset_button.grid(row=3, column=0, pady=5, padx=20)
+
+        self.dataset_directory_label = customtkinter.CTkLabel(master=self.left_frame,
+                                                              text="",
+                                                              text_color="green",
+                                                              text_font=("Open Sans", -12))  # font name and size in px
+        self.dataset_directory_label.grid(row=4, column=0, pady=(0, 10), padx=20)
 
         # Import test image
         self.test_label = customtkinter.CTkLabel(master=self.left_frame,
                                                  text="Import test image",
                                                  text_font=("Open Sans", -14))  # font name and size in px
-        self.test_label.grid(row=4, column=0, pady=0, padx=10)
+        self.test_label.grid(row=5, column=0, pady=0, padx=20)
+
         self.test_button = customtkinter.CTkButton(master=self.left_frame,
                                                    text="Open image",
                                                    text_font=("Open Sans", -12),
                                                    command=self.get_test_image)
-        self.test_button.grid(row=5, column=0, pady=5, padx=20)
+        self.test_button.grid(row=6, column=0, pady=5, padx=20)
+
+        self.test_file_label = customtkinter.CTkLabel(master=self.left_frame,
+                                                      text="",
+                                                      text_color="green",
+                                                      text_font=("Open Sans", -12))  # font name and size in px
+        self.test_file_label.grid(row=7, column=0, pady=(0, 10), padx=20)
+
+        # Start recognition
+        self.recognition_button = customtkinter.CTkButton(master=self.left_frame,
+                                                          text="Start recognition",
+                                                          text_font=("Open Sans Semibold", -12),
+                                                          command=self.recognize)
+        self.recognition_button.grid(row=8, column=0, pady=5, padx=20)
+
+        self.recognition_status_label = customtkinter.CTkLabel(master=self.left_frame,
+                                                               text="",
+                                                               text_font=("Open Sans", -12))
+        self.recognition_status_label.grid(row=9, column=0, pady=5, padx=20)
 
         # Result
         self.result_label = customtkinter.CTkLabel(master=self.left_frame,
                                                    text="Result:",
                                                    text_font=("Open Sans Semibold", -14))  # font name and size in px
-        self.result_label.grid(row=7, column=0, pady=0, padx=10)
+        self.result_label.grid(row=11, column=0, pady=0, padx=20)
+
         self.result_percentage_label = customtkinter.CTkLabel(master=self.left_frame,
                                                               text="",
                                                               text_font=(
                                                                   "Open Sans", -14))  # font name and size in px
-        self.result_percentage_label.grid(row=8, column=0, pady=0, padx=10)
+        self.result_percentage_label.grid(row=12, column=0, pady=0, padx=20)
 
         # Execution time
         self.exec_label = customtkinter.CTkLabel(master=self.left_frame,
                                                  text="Execution time:",
                                                  text_font=("Open Sans Semibold", -14))  # font name and size in px
-        self.exec_label.grid(row=9, column=0, pady=0, padx=10)
+        self.exec_label.grid(row=13, column=0, pady=0, padx=20)
+
         self.exec_time_label = customtkinter.CTkLabel(master=self.left_frame,
                                                       text="",
                                                       text_font=(
                                                           "Open Sans", -14))  # font name and size in px
-        self.exec_time_label.grid(row=10, column=0, pady=0, padx=10)
+        self.exec_time_label.grid(row=14, column=0, pady=0, padx=20)
 
         # GUI theme
-        self.theme_label = customtkinter.CTkLabel(master=self.left_frame, text="Select theme:", text_font=("Open Sans",
-                                                                                                           -12))
-        self.theme_label.grid(row=12, column=0, pady=0, padx=20, sticky="w")
+        self.theme_label = customtkinter.CTkLabel(master=self.left_frame,
+                                                  text="Select theme:",
+                                                  text_font=("Open Sans", -12))  # font name and size in px
+        self.theme_label.grid(row=16, column=0, pady=0, padx=20, sticky="w")
+
         self.theme_options = customtkinter.CTkOptionMenu(master=self.left_frame,
                                                          values=["Dark", "Light", "System"],
                                                          text_font=("Open Sans", -12),
                                                          command=change_appearance_mode)
-        self.theme_options.grid(row=13, column=0, pady=5, padx=20, sticky="w")
+        self.theme_options.grid(row=17, column=0, pady=5, padx=20, sticky="")
 
         # ============ right_frame ============
 
@@ -110,7 +142,7 @@ class App(customtkinter.CTk):
         self.test_image_label = customtkinter.CTkLabel(master=self.right_frame,
                                                        text="Test image",
                                                        text_font=(
-                                                           "Open Sans", -16))  # font name and size in px
+                                                           "Open Sans Semibold", -16))  # font name and size in px
         self.test_image_label.grid(row=1, column=0, pady=(20, 0), padx=10)
 
         self.test_image_frame = customtkinter.CTkFrame(master=self.right_frame)
@@ -131,7 +163,7 @@ class App(customtkinter.CTk):
         self.closest_image_label = customtkinter.CTkLabel(master=self.right_frame,
                                                           text="Closest result",
                                                           text_font=(
-                                                              "Open Sans", -16))  # font name and size in px
+                                                              "Open Sans Semibold", -16))  # font name and size in px
         self.closest_image_label.grid(row=1, column=1, pady=(20, 0), padx=10)
 
         self.closest_image_frame = customtkinter.CTkFrame(master=self.right_frame)
@@ -139,9 +171,6 @@ class App(customtkinter.CTk):
         self.closest_image_frame.rowconfigure((0, 2), minsize=20)
         self.closest_image_frame.columnconfigure((0, 2), minsize=20)
 
-        # closest_image = Image.open("tobi.jpg")
-        # closest_image = closest_image.resize((400, 400))
-        # closest_image = ImageTk.PhotoImage(closest_image)
         self.closest_image_button = customtkinter.CTkButton(master=self.closest_image_frame,
                                                             text="",
                                                             width=323,
@@ -159,16 +188,60 @@ class App(customtkinter.CTk):
 
     def get_test_image(self):
         file_type = [("JPG File", "*.jpg")]
-        test_image_file_name = tkinter.filedialog.askopenfilename(title='Open image', filetypes=file_type)
+        test_image_full_path = tkinter.filedialog.askopenfilename(title='Open image',
+                                                                  filetypes=file_type,
+                                                                  initialdir=".")
+        App.test_image = test_image_full_path
 
-        test_image = Image.open(test_image_file_name)
+        test_image = Image.open(test_image_full_path)
         test_image = test_image.resize((400, 400))
         test_image = ImageTk.PhotoImage(test_image)
+
+        self.test_image_button.configure(image=None)
         self.test_image_button.configure(image=test_image)
+
+        if App.test_image is not None:
+            self.test_file_label.configure(text=None)
+            self.test_file_label.configure(text="Image is selected!")
+
+    def get_dataset_dir(self):
+        dataset_dir = tkinter.filedialog.askdirectory(title='Select directory',
+                                                      initialdir=".")
+        App.dataset_dir = dataset_dir
+
+        if App.dataset_dir != '':
+            print(App.dataset_dir)
+            self.dataset_directory_label.configure(text=None)
+            self.dataset_directory_label.configure(text="Directory is selected!")
+
+    def recognize(self):
+        if (App.dataset_dir is None) or (App.dataset_dir == ''):
+            self.recognition_status_label.configure(text_color="red",
+                                                    text="Dataset is not defined!")
+        elif App.test_image is None:
+            self.recognition_status_label.configure(text_color="red",
+                                                    text="Test image is not defined!")
+        else:
+            self.recognition_status_label.configure(text_color=("blue", "yellow"),
+                                                    text="Recognizing...")
+
+            # =============== ALGORITHM HERE ==============
+
+            self.recognition_status_label.configure(text_color="green",
+                                                    text="Finished!")
+
+            self.set_result_percentage()
+            self.set_exec_time()
+
+    def set_result_percentage(self):
+        self.result_percentage_label.configure(text="")
+
+    def set_exec_time(self):
+        self.exec_time_label.configure(text="")
 
 
 def button_event():
-    print("Button pressed")
+    print(App.test_image)
 
 
 def change_appearance_mode(new_appearance_mode):
