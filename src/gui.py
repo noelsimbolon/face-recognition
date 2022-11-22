@@ -16,6 +16,8 @@ class App(customtkinter.CTk):
     min_height = 600
     dataset_dir = None
     test_image = None
+    res_image = None
+    idx = None
 
     def __init__(self):
         super().__init__()
@@ -218,6 +220,16 @@ class App(customtkinter.CTk):
             self.dataset_directory_label.configure(text=None)
             self.dataset_directory_label.configure(text="Directory is selected!")
 
+    def get_res_image(self):
+        res_image_full_path = f"{App.dataset_dir}/{App.res_image}"
+
+        res_image = Image.open(res_image_full_path)
+        res_image = res_image.resize((400, 400))
+        res_image = ImageTk.PhotoImage(res_image)
+
+        self.closest_image_button.configure(image=None)
+        self.closest_image_button.configure(image=res_image)
+
     def recognize(self):
         if (App.dataset_dir is None) or (App.dataset_dir == ''):
             self.recognition_status_label.configure(text_color="red",
@@ -246,7 +258,9 @@ class App(customtkinter.CTk):
             # =============== ALGORITHM HERE ==============
             image = eigen.process_image(App.test_image, mean)
             testing_weights = image.T @ eigenfaces.T
-            idx, _ = eigen.euclidean_distance(weights, testing_weights)
+            App.idx, _ = eigen.euclidean_distance(weights, testing_weights)
+
+            App.res_image = files[App.idx]
 
             self.recognition_status_label.configure(text_color="green",
                                                     text="Finished!")
