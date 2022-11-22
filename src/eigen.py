@@ -11,9 +11,12 @@ def load_images(filepath):
     files = []
     for folder in os.listdir(filepath):
         folder_path = os.path.join(filepath, folder)
-        for idx, img in zip(range(3), os.listdir(folder_path)):
-            img_path = os.path.join(folder_path, img)
-            files.append(img_path)
+        try:
+            for idx, img in zip(range(3), os.listdir(folder_path)):
+                img_path = os.path.join(folder_path, img)
+                files.append(img_path)
+        except NotADirectoryError:
+            files.append(folder_path)
     with open("data/images.json", "w+") as f:
         json.dump(files, f)
     images = np.array([load_image(i) for i in files])
