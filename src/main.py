@@ -40,7 +40,7 @@ def generate_dataset(image_dir, filename):
     _, _eigenvector = eigen.eigen(cov_images)
 
     # langkah 6
-    _eigenface = _eigenvector.dot(normalized.T)
+    _eigenface = normalized.dot(_eigenvector)
     print(f"Estimated eigenface file size: {_eigenface.nbytes / 1024 / 1024} MB")
     print(f"Estimated eigenvector file size: {_eigenvector.nbytes / 1024 / 1024} MB")
     save_training_data(filename, _mean, _eigenface, _eigenvector)
@@ -72,7 +72,9 @@ if __name__ == "__main__":
             n += ".jpg"
         print("Please wait")
         # filepath = fr"..\test\{n}"
+        # training_coeff = eigen.linear_combination(eigenface, normalized) normalized belom dapet
         eigenface_testing = eigen.process_image(n, mean)
+        # testing_coeff = eigen.linear_combination(eigenface, eigenface_testing)
         # weight = eigenface_testing.T.dot(eigenface.T)
         # weight = np.argmin(eigen.norm(weight))
         idx, _ = eigen.euclidean_distance(eigenface, eigenface_testing)
