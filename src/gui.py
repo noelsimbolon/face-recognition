@@ -1,7 +1,11 @@
+import json
+import os
 import tkinter
 import customtkinter
 from tkinter import filedialog
 from PIL import Image, ImageTk
+from main import generate_training_data, load_training_data
+import eigen
 
 customtkinter.set_appearance_mode("Dark")
 customtkinter.set_default_color_theme("blue")
@@ -222,10 +226,27 @@ class App(customtkinter.CTk):
             self.recognition_status_label.configure(text_color="red",
                                                     text="Test image is not defined!")
         else:
+            data_filename = r"\data\training_data"
+            if not (os.path.isfile(data_filename + "_eigenface.npy")
+                    and os.path.isfile(data_filename + "_mean.npy")
+                    and os.path.isfile(data_filename + "_eigenvector.npy")
+                    and os.path.isfile(data_filename + "_weights.npy")):
+                self.recognition_status_label.configure(text_color=("blue", "yellow"),
+                                                        text="Building dataset...")
+                generate_training_data(App.dataset_dir, data_filename)
+            else:
+                self.recognition_status_label.configure(text_color=("blue", "yellow"),
+                                                        text="Loading dataset...")
+            eigenvectors, eigenfaces, mean, weights = load_training_data(data_filename)
+            files = json.load(open("data/images.json", "r"))
+
             self.recognition_status_label.configure(text_color=("blue", "yellow"),
                                                     text="Recognizing...")
 
             # =============== ALGORITHM HERE ==============
+            image = eigen.process_image(App.test_image, mean)
+            testing_weights = image.T @ eigenfaces.T
+            idx, _ = eigen.euclidean_distance(weights, testing_weights)
 
             self.recognition_status_label.configure(text_color="green",
                                                     text="Finished!")

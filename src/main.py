@@ -38,7 +38,7 @@ def get_path():
     return args.path
 
 
-def generate_dataset(image_dir, filename):
+def generate_training_data(image_dir, filename):
     images = eigen.load_images(image_dir)
     total_images = images.shape[0]
     _mean, normalized = eigen.mean_images(images)
@@ -72,7 +72,7 @@ if __name__ == "__main__":
             and os.path.isfile(data_filename + "_eigenvector.npy")
             and os.path.isfile(data_filename + "_weights.npy")):
         print("Dataset not found! Generating new file...")
-        generate_dataset(path, data_filename)
+        generate_training_data(path, data_filename)
         print("Dataset successfully generated.")
     else:
         print("Dataset found! Loading dataset...")

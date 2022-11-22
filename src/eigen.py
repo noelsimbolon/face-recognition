@@ -101,7 +101,7 @@ def eig(matrix, normalized, iteration=100):
     # eigenvalue = np.around(eigenvalue, decimals=3)
     # eigenvector = np.around(eigenvector, decimals=3)
 
-    return eigenvalue, eigenvector#, normal
+    return eigenvalue, eigenvector
 
 
 def linear_combination(eigenface, normalized):
