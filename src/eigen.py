@@ -17,35 +17,35 @@ def load_images(filepath):
     with open("data/images.json", "w+") as f:
         json.dump(files, f)
     images = np.array([load_image(i) for i in files])
-    return images.transpose()
+    return images
 
 
 def load_image(file):
     # langkah 1
     img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
     img = cv2.resize(img, (256, 256))
-    img = img.reshape(256 * 256,)
+    img = img.flatten()
     return img
 
 
 def process_image(file, mean):
-    img = load_image(file)
-    img = img.reshape(256 * 256, 1)
+    img = cv2.imread(file, cv2.IMREAD_GRAYSCALE).astype(np.float32)
+    img = cv2.resize(img, (256, 256))
+    img = img.reshape(256, 256)
     img = np.asarray(img)
-    return img - mean
+    mean = mean.reshape(256, 256)
+    return (img - mean).reshape(256*256,)
 
 
 def mean_images(imgs):
     # langkah 2
-    mean = imgs.mean(axis=1)
-    mean = mean.reshape(imgs.shape[0], 1)
+    mean = imgs.mean(axis=0)
     return mean, imgs - mean  # langkah 3
 
 
 def get_cov(imgs):
     # langkah 4
-    cov = (imgs).dot(np.transpose(imgs))
-    return cov
+    return imgs @ imgs.T
 
 
 def norm(matrix):
@@ -75,9 +75,9 @@ def qr_decom(matrix):
     return -np.matmul(Q, np.sign(np.diagonal(np.sign(Q)))), -np.matmul(np.sign(np.diagonal(np.sign(Q))), R)
 
 
-def eigen(matrix, iteration=100):
-    m = np.array(matrix)
-    n = m.shape[0]
+def eig(matrix, normalized, iteration=100):
+    # m = np.asarray(matrix)
+    n = matrix.shape[0]
     eigenvector = np.identity(n)
 
     # pake qr sendiri
@@ -85,49 +85,50 @@ def eigen(matrix, iteration=100):
         Q, R = qr_decom(matrix)
         eigenvector = np.matmul(eigenvector,Q)
         matrix = np.matmul(R,Q) """
-
     # pake qr numpy
     for i in range(iteration):
-        m = np.copy(matrix)
-        Q, R = np.linalg.qr(m)
+        Q, R = np.linalg.qr(matrix)
         matrix = np.matmul(R, Q)
         eigenvector = np.matmul(eigenvector, Q)
 
     eigenvalue = np.diagonal(matrix)
 
-    idxsort = eigenvalue.argsort()[::-1]
-    eigenvalue = eigenvalue[idxsort]
-    eigenvector = eigenvector[:, idxsort]
+    # idxsort = eigenvalue.argsort()[::-1]
+    # eigenvalue = eigenvalue[idxsort]
+    # eigenvector = eigenvector[:, idxsort]
+    # normal = normalized[idxsort, :]
 
-    eigenvalue = np.around(eigenvalue, decimals=3)
-    eigenvector = np.around(eigenvector, decimals=3)
+    # eigenvalue = np.around(eigenvalue, decimals=3)
+    # eigenvector = np.around(eigenvector, decimals=3)
 
-    return eigenvalue, eigenvector
+    return eigenvalue, eigenvector#, normal
 
-def linear_combination(eigenface_training, normalized_matrix):
-    m, n = normalized_matrix.shape
-    coeff_matrix = np.empty((m,0))
 
-    for i in range(n):
-        result = np.linalg.solve(np.transpose(eigenface_training),normalized_matrix[:,i])
-        coeff_matrix = np.append(coeff_matrix, np.transpose(result), axis=1)
+def linear_combination(eigenface, normalized):
+    coeff_vector = np.array([])
 
-    return coeff_matrix
+    for normal in normalized:
+        normal = normal.reshape((256, 256))
+        for face in eigenface:
+            face = face.reshape((256, 256))
+            res = np.linalg.solve(face.T, normal)
+            coeff_vector = np.append(coeff_vector, res)
 
-def euclidean_distance(eigenface_training, eigenface_testing):
-    n = eigenface_training.shape[0]
+    return coeff_vector
 
-    smallest_distance = 99999
-    idx_smallest = 0
 
-    for i in range(n):
-        distance = norm(eigenface_training[:, i] - eigenface_testing[i, :])
+def euclidean_distance(weights, test_weights):
+    small = 1_000_000_000
+    idx_small = 0
+    dist = 0
 
-        if distance < smallest_distance:
-            smallest_distance = distance
-            idx_smallest = i
+    for idx, weight in enumerate(weights):
+        dist = norm(weight - test_weights)
 
-    return idx_smallest, smallest_distance
+        if dist < small:
+            small = dist
+            idx_small = idx
+    return idx_small, dist
 
 
 if __name__ == "__main__":
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     print(eval)
     print(evec)
 
-    result = eigen(inp, 100000)  # iterationnya bebas diganti berapa
+    result = eig(inp, 100000)  # iterationnya bebas diganti berapa
     """ np.savetxt('eigval.txt',result[0])
     np.savetxt('eigvec.txt',result[1]) """
     print(result[0])
