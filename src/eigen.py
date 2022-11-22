@@ -44,7 +44,8 @@ def mean_images(imgs):
 
 def get_cov(imgs):
     # langkah 4
-    return np.cov(imgs)
+    cov = (imgs).dot(np.transpose(imgs))
+    return cov
 
 
 def norm(matrix):
@@ -103,6 +104,15 @@ def eigen(matrix, iteration=100):
 
     return eigenvalue, eigenvector
 
+def linear_combination(eigenface_training, normalized_matrix):
+    m, n = normalized_matrix.shape
+    coeff_matrix = np.empty((m,0))
+
+    for i in range(n):
+        result = np.linalg.solve(np.transpose(eigenface_training),normalized_matrix[:,i])
+        coeff_matrix = np.append(coeff_matrix, np.transpose(result), axis=1)
+
+    return coeff_matrix
 
 def euclidean_distance(eigenface_training, eigenface_testing):
     n = eigenface_training.shape[0]
